@@ -42,7 +42,29 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         return user
 
 class UpdateUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+    password2 = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = User
-        fields = ['pk', 'email', 'first_name', 'last_name']
-        read_only_fields = ('id', 'username')
+        fields = ['pk', 'username','email', 'first_name', 'last_name','password', 'password2']
+
+    def validate(self, data):
+        if ('password' in data and 'password2' not in data) or ('password2' in data and 'password' not in data):
+            raise serializers.ValidationError("Both 'password' and 'password2' are required.")
+        return data
+
+    def update(self, instance, validated_data):
+        instance.username = validated_data.get('username', instance.username)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.email = validated_data.get('email', instance.email)
+
+        password = validated_data.get('password', None)
+        password2 = validated_data.get('password2', None)
+
+        if password and password2 and password == password2:
+            instance.set_password(password)
+        
+        instance.save()
+        return instance
